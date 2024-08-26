@@ -40,3 +40,33 @@ export const postChild = async (req, res) => {
         });
     };
 };
+
+export const updateChild = async (req, res) => {
+    try {
+        await ChildModel.updateOne(
+            {
+                id: req.params._id
+            }, 
+            {
+                name: req.body.name,
+                surname: req.body.surname,
+                secondName: req.body.secondName,
+            }
+    );
+
+    res.json({
+        success: true,
+        message: {
+            name: req.body.name,
+            surname: req.body.surname,
+            secondName: req.body.secondName,
+        }
+    })
+
+    } catch (error) {
+        res.status(500).json({
+            message: 'Не удалось изменить запись'
+        });
+        console.log(error);
+    };
+};

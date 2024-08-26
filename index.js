@@ -15,6 +15,7 @@ app.use(express.json());
 
 app.get('/children', ChildController.getAllChildren);
 app.post('/children', childCreateValidator, ChildController.postChild);
+app.patch('/children/:id', childCreateValidator, ChildController.updateChild)
 
 
 app.listen(PORT, (err) => {
