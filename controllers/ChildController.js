@@ -45,7 +45,7 @@ export const updateChild = async (req, res) => {
     try {
         await ChildModel.updateOne(
             {
-                id: req.params._id
+                _id: req.params.id
             }, 
             {
                 name: req.body.name,
@@ -70,3 +70,24 @@ export const updateChild = async (req, res) => {
         console.log(error);
     };
 };
+
+export const deleteChild = async (req, res) => {
+    try {
+        await ChildModel.deleteOne(
+            {
+                _id: req.params.id
+            }
+        );
+    res.json({
+        success: true,
+        message: {
+            id: req.params.id
+        }
+    })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: 'Не удалось удалить запись'
+        });
+    };
+}

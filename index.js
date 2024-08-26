@@ -15,7 +15,8 @@ app.use(express.json());
 
 app.get('/children', ChildController.getAllChildren);
 app.post('/children', childCreateValidator, ChildController.postChild);
-app.patch('/children/:id', childCreateValidator, ChildController.updateChild)
+app.patch('/children/:id', childCreateValidator, ChildController.updateChild);
+app.delete('/children/:id', ChildController.deleteChild);
 
 
 app.listen(PORT, (err) => {
@@ -25,4 +26,5 @@ app.listen(PORT, (err) => {
 
     return console.log('SEREVER OK ON PORT: ', PORT);
 });
+
 
