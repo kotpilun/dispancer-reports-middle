@@ -3,7 +3,7 @@ import ChildModel from '../models/Child.js'
 
 export const getAllChildren = async (req, res) => {
     try {
-        const allChildren = await ChildModel.find();
+        const allChildren = await ChildModel.find().populate('dispancer').exec();
 
         res.json(allChildren);
     } catch (error) {
@@ -26,7 +26,11 @@ export const postChild = async (req, res) => {
         const doc = new ChildModel({
             name: req.body.name,
             surname: req.body.surname,
-            secondName: req.body.secondName
+            secondName: req.body.secondName,
+            dateOfBirth: req.body.dateOfBirth,
+            sportsCategory: req.body.sportsCategory,
+            address: req.body.address,
+            dispancer: req.body.dispancer
         });
 
         const child = await doc.save();

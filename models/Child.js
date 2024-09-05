@@ -14,6 +14,23 @@ const ChildSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        dateOfBirth: {
+            type: String,
+            required: true
+        },
+        sportsCategory: {
+            type: String,
+            required: true
+        },
+        address: {
+            type: String,
+            required: true
+        },
+        dispancer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Dispancer',
+            required: true
+        },
     },
         
     {
