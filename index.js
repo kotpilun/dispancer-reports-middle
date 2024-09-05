@@ -24,7 +24,7 @@ app.post('/docs', createDoc);
 app.patch('/children/:id', childCreateValidator, ChildController.updateChild);
 app.delete('/children/:id', ChildController.deleteChild);
 
-app.get('dispancer', DispancerController.getAllDispancers);
+app.get('/dispancer', DispancerController.getAllDispancers);
 app.post('/dispancer', DispancerController.postDispancer);
 
 

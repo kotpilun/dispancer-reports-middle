@@ -1,17 +1,44 @@
 import { validationResult } from 'express-validator';
 import ChildModel from '../models/Child.js'
 
+// export const getAllChildren = async (req, res) => {
+//     try {
+//         const allChildren = await ChildModel.find().populate('dispancer').exec();
+
+//         res.json(allChildren);
+//     } catch (error) {
+//         console.log(error);
+//         res.status(500).json({
+//             message: 'Не удалось получить данные',
+//         });
+//     };
+// };
+
 export const getAllChildren = async (req, res) => {
     try {
         const allChildren = await ChildModel.find().populate('dispancer').exec();
 
-        res.json(allChildren);
+        const formattedChildren = allChildren.map(child => ({
+            _id: child._id,
+            name: child.name,
+            surname: child.surname,
+            secondName: child.secondName,
+            dateOfBirth: child.dateOfBirth,
+            sportsCategory: child.sportsCategory,
+            address: child.address,
+            dispancer: child.dispancer.name, // Извлечение только имени диспансера
+            createdAt: child.createdAt,
+            updatedAt: child.updatedAt,
+            __v: child.__v
+        }));
+
+        res.json(formattedChildren);
     } catch (error) {
         console.log(error);
         res.status(500).json({
             message: 'Не удалось получить данные',
         });
-    };
+    }
 };
 
 export const postChild = async (req, res) => {
