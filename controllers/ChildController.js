@@ -82,6 +82,10 @@ export const updateChild = async (req, res) => {
                 name: req.body.name,
                 surname: req.body.surname,
                 secondName: req.body.secondName,
+                dateOfBirth: req.body.dateOfBirth,
+                sportsCategory: req.body.sportsCategory,
+                address: req.body.address,
+                dispancer: req.body.dispancer
             }
     );
 
@@ -91,6 +95,10 @@ export const updateChild = async (req, res) => {
             name: req.body.name,
             surname: req.body.surname,
             secondName: req.body.secondName,
+            dateOfBirth: req.body.dateOfBirth,
+            sportsCategory: req.body.sportsCategory,
+            address: req.body.address,
+            dispancer: req.body.dispancer
         }
     })
 
