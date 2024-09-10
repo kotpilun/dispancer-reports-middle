@@ -14,7 +14,7 @@ export async function generateOpenChampionshipReport(dispancer, childInfo, year,
         const workbook = new ExcelJS.Workbook();
         
         // Чтение существующего файла
-        await workbook.xlsx.readFile('./reports/ruza.xlsx');
+        await workbook.xlsx.readFile('./reports/turnir.xlsx');
         const worksheet = workbook.getWorksheet(1);
 
         let cell = worksheet.getRow(4).getCell('A');
