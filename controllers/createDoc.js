@@ -3,9 +3,13 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { modifyDateOfBirth } from '../utils/modifyDateOfBirth.js';
 import { modifySportsCategory } from '../utils/modifySportsCategory.js';
-import archiver from 'archiver';
 import { generateChampionshipReport } from '../report_generators/championship.js';
-
+import { createZipArchive } from '../utils/createZip.js';
+import { sendAndDeleteZipFile } from '../utils/sendAndDeleteZipFile.js';
+import { deleteTemporaryFiles } from '../utils/deleteTemporaryFiles.js';
+import { generateRuzaCupReport } from '../report_generators/ruzaCup.js';
+import { generateOpenChampionshipReport } from '../report_generators/openChampionship.js';
+import { generateGoldenFishReport } from '../report_generators/goldenFish.js';
 
 // Получаем путь к текущему модулю
 const __filename = fileURLToPath(import.meta.url);
@@ -24,63 +28,35 @@ export async function createDoc(req, res) {
 
     const childInfo = req.body.childInfo;
     childInfo.forEach(item => item.dateOfBirth = modifyDateOfBirth(item.dateOfBirth));
-    childInfo.forEach(item => item.sportsCategory = modifySportsCategory(item));
-
-    // Создаем ZIP архив
-    const zipFilePath = path.join(__dirname, 'dispancers_reports.zip');
-    const output = fs.createWriteStream(zipFilePath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
-
-    output.on('close', () => {
-        console.log(`${archive.pointer()} total bytes`);
-        console.log('Archiver has been finalized and the output file descriptor has closed.');
-
-        // Отправляем архив клиенту
-        res.download(zipFilePath, 'dispancers_reports.zip', (err) => {
-            if (err) {
-                console.error('Error sending file:', err);
-                res.status(500).send('Error sending file');
-            } else {
-                // Удаляем архив после отправки
-                fs.unlink(zipFilePath, (unlinkErr) => {
-                    if (unlinkErr) {
-                        console.error('Error deleting zip file:', unlinkErr);
-                    } else {
-                        console.log('Zip file deleted successfully');
-                    }
-                });
-            }
-        });
-    });
-
-    archive.on('error', (err) => {
-        throw err;
-    });
-
-    archive.pipe(output);
-
+    
     const createdFiles = [];
-
-    // Для каждого диспансера создаем отдельный Excel-файл, используя функцию из нового файла
+    
+    // Для каждого диспансера создаем отдельный Excel-файл
     for (let dispancer of dispancers) {
-
         try {
-            let filePath;
+            let filePath; // Объявляем переменную filePath вне блока switch
+            
             switch (req.body.competitonType) {
                 case 'Чемпионат':
+                    childInfo.forEach(item => item.sportsCategory = modifySportsCategory(item));
                     filePath = await generateChampionshipReport(dispancer, childInfo, req.body.year, __dirname);
                     break;
-                case 'Gold fish':
-                    filePath = await generateGoldFishReport(dispancer, childInfo, req.body.year, __dirname);
-                    break;
-            
+                    case 'Ruza Cup':
+                        filePath = await generateRuzaCupReport(dispancer, childInfo, req.body.year, req.body.dateOfCompetition, __dirname);
+                        break;
+                    case 'Открытый турнир':
+                        filePath = await generateOpenChampionshipReport(dispancer, childInfo, req.body.year, req.body.dateOfCompetition, req.body.city, req.body.give, __dirname);
+                        break;
+                    case 'Золотая рыбка':
+                        childInfo.forEach(item => item.sportsCategory = modifySportsCategory(item));
+                        filePath = await generateGoldenFishReport(dispancer, childInfo, req.body.year, req.body.girlsBirthYears, req.body.boysBirthYears, req.body.stage, __dirname);
+                        break;
                 default:
-                    break;
+                    throw new Error('Unsupported competition type');
             }
 
-            // Добавляем файл в архив
-            archive.file(filePath, { name: path.basename(filePath) });
-            createdFiles.push(filePath);  // Добавляем файл в список созданных файлов
+            // Добавляем файл в список созданных файлов
+            createdFiles.push(filePath);
 
         } catch (error) {
             console.error('Error creating Excel file:', error);
@@ -89,17 +65,18 @@ export async function createDoc(req, res) {
         }
     }
 
-    // Завершаем архивирование
-    await archive.finalize();
+    // Создаем ZIP-архив
+    const zipFilePath = path.join(__dirname, 'dispancers_reports.zip');
 
-    // После завершения архивации удаляем временные Excel файлы
-    createdFiles.forEach((filePath) => {
-        fs.unlink(filePath, (unlinkErr) => {
-            if (unlinkErr) {
-                console.error(`Error deleting file ${filePath}:`, unlinkErr);
-            } else {
-                console.log(`File ${filePath} deleted successfully`);
-            }
-        });
-    });
+    try {
+        await createZipArchive(createdFiles, zipFilePath);
+
+        sendAndDeleteZipFile(res, zipFilePath);
+
+        deleteTemporaryFiles(createdFiles);
+
+    } catch (error) {
+        console.error('Error creating ZIP archive:', error);
+        res.status(500).send('An error occurred while creating the ZIP archive');
+    }
 }
