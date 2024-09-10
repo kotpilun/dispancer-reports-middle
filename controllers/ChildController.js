@@ -1,19 +1,6 @@
 import { validationResult } from 'express-validator';
 import ChildModel from '../models/Child.js'
 
-// export const getAllChildren = async (req, res) => {
-//     try {
-//         const allChildren = await ChildModel.find().populate('dispancer').exec();
-
-//         res.json(allChildren);
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({
-//             message: 'Не удалось получить данные',
-//         });
-//     };
-// };
-
 export const getAllChildren = async (req, res) => {
     try {
         const allChildren = await ChildModel.find().populate('dispancer').exec();
@@ -48,7 +35,6 @@ export const postChild = async (req, res) => {
         if (!errors.isEmpty()) {
             return res.status(400).json(errors.array());
         }
-        
 
         const doc = new ChildModel({
             name: req.body.name,

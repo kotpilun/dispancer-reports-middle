@@ -1,54 +1,105 @@
-import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { modifyDateOfBirth } from '../utils/modifyDateOfBirth.js';
+import { modifySportsCategory } from '../utils/modifySportsCategory.js';
+import archiver from 'archiver';
+import { generateChampionshipReport } from '../report_generators/championship.js';
+
 
 // Получаем путь к текущему модулю
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function createDoc(req, res) {
-    try {
-        const workbook = new ExcelJS.Workbook();
-        
-        // Чтение существующего файла
-        await workbook.xlsx.readFile('test.xlsx');
+    const dispancers = new Set();
+    console.log('req.body', req.body);
 
-        // Массив значений для записи
-        const valuesToInsert = [1, 2, 3, 4, 5];
+    // Забираем из тела запроса уникальный список диспансеров
+    if (Array.isArray(req.body?.childInfo) && req.body?.childInfo.length > 0) {
+        req.body.childInfo.forEach(item => {
+            dispancers.add(item.dispancer); 
+        });
+    }
 
-        // Обработка каждого листа в книге
-        for (const worksheet of workbook.worksheets) {
-            let insertRowIndex = 7; // Индекс строки, начиная с которой вставлять
+    const childInfo = req.body.childInfo;
+    childInfo.forEach(item => item.dateOfBirth = modifyDateOfBirth(item.dateOfBirth));
+    childInfo.forEach(item => item.sportsCategory = modifySportsCategory(item));
 
-            // Вставка новых строк с использованием insertRow
-            valuesToInsert.forEach((value, index) => {
-                worksheet.insertRow(insertRowIndex + index, [value]);
-            });
-        }
+    // Создаем ZIP архив
+    const zipFilePath = path.join(__dirname, 'dispancers_reports.zip');
+    const output = fs.createWriteStream(zipFilePath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
 
-        // Запись новой книги в файл
-        const filePath = path.join(__dirname, 'new.xlsx');
-        await workbook.xlsx.writeFile(filePath);
+    output.on('close', () => {
+        console.log(`${archive.pointer()} total bytes`);
+        console.log('Archiver has been finalized and the output file descriptor has closed.');
 
-        // Отправка файла клиенту
-        res.download(filePath, 'new.xlsx', (err) => {
+        // Отправляем архив клиенту
+        res.download(zipFilePath, 'dispancers_reports.zip', (err) => {
             if (err) {
                 console.error('Error sending file:', err);
                 res.status(500).send('Error sending file');
             } else {
-                // Удаление файла после успешной отправки
-                fs.unlink(filePath, (unlinkErr) => {
+                // Удаляем архив после отправки
+                fs.unlink(zipFilePath, (unlinkErr) => {
                     if (unlinkErr) {
-                        console.error('Error deleting file:', unlinkErr);
+                        console.error('Error deleting zip file:', unlinkErr);
                     } else {
-                        console.log('File deleted successfully');
+                        console.log('Zip file deleted successfully');
                     }
                 });
             }
         });
-    } catch (error) {
-        console.error('Error creating Excel file:', error);
-        res.status(500).send('An error occurred while creating the file');
+    });
+
+    archive.on('error', (err) => {
+        throw err;
+    });
+
+    archive.pipe(output);
+
+    const createdFiles = [];
+
+    // Для каждого диспансера создаем отдельный Excel-файл, используя функцию из нового файла
+    for (let dispancer of dispancers) {
+
+        try {
+            let filePath;
+            switch (req.body.competitonType) {
+                case 'Чемпионат':
+                    filePath = await generateChampionshipReport(dispancer, childInfo, req.body.year, __dirname);
+                    break;
+                case 'Gold fish':
+                    filePath = await generateGoldFishReport(dispancer, childInfo, req.body.year, __dirname);
+                    break;
+            
+                default:
+                    break;
+            }
+
+            // Добавляем файл в архив
+            archive.file(filePath, { name: path.basename(filePath) });
+            createdFiles.push(filePath);  // Добавляем файл в список созданных файлов
+
+        } catch (error) {
+            console.error('Error creating Excel file:', error);
+            res.status(500).send('An error occurred while creating the files');
+            return;
+        }
     }
+
+    // Завершаем архивирование
+    await archive.finalize();
+
+    // После завершения архивации удаляем временные Excel файлы
+    createdFiles.forEach((filePath) => {
+        fs.unlink(filePath, (unlinkErr) => {
+            if (unlinkErr) {
+                console.error(`Error deleting file ${filePath}:`, unlinkErr);
+            } else {
+                console.log(`File ${filePath} deleted successfully`);
+            }
+        });
+    });
 }
