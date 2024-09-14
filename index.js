@@ -7,7 +7,8 @@ import { childCreateValidator } from "./validations/child.js";
 import { createDoc } from "./controllers/createDoc.js";
 
 
-mongoose.connect('mongodb://admin:secret@localhost:27017/dispancer?authSource=admin')
+// mongoose.connect('mongodb://admin:secret@localhost:27017/dispancer?authSource=admin')
+mongoose.connect('mongodb://mongo:27017/dispancer')
     .then(() => console.log('DB STARTED ON PORT 27017'))
     .catch((err) => console.log('DB ERROR: ', err));
 
